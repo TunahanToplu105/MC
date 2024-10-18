@@ -1,0 +1,561 @@
+using UnityEngine;
+
+public class Voxel : MonoBehaviour
+{
+    public GameObject voxelPrefab;
+    public int width = 10;
+    public int height = 10;
+    public int depth = 10;
+
+    void Start()
+    {
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                for (int z = 0; z < depth; z++)
+                {
+                    Instantiate(voxelPrefab, new Vector3(x, y, z), Quaternion.identity);
+                }
+            }
+        }
+    }
+}
+using UnityEngine;
+
+public class BlockInteraction : MonoBehaviour
+{
+    public GameObject voxelPrefab;
+    void Update()
+    {
+        if (Input.GetMouseButtonDown(0)) // Sol tıklama
+        {
+            RaycastHit hit;
+            if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit))
+            {
+                Destroy(hit.collider.gameObject);
+            }
+        }
+
+        if (Input.GetMouseButtonDown(1)) // Sağ tıklama
+        {
+            RaycastHit hit;
+            if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit))
+            {
+                Instantiate(voxelPrefab, hit.point + hit.normal, Quaternion.identity);
+            }
+        }
+    }
+}
+using UnityEngine;
+
+public class PlayerMovement : MonoBehaviour
+{
+    public float speed = 5.0f;
+    public float mouseSensitivity = 2.0f;
+    private float verticalRotation = 0;
+
+    void Update()
+    {
+        float horizontal = Input.GetAxis("Horizontal") * speed * Time.deltaTime;
+        float vertical = Input.GetAxis("Vertical") * speed * Time.deltaTime;
+
+        transform.Translate(horizontal, 0, vertical);
+
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+        float mouseY = -Input.GetAxis("Mouse Y") * mouseSensitivity;
+
+        transform.Rotate(0, mouseX, 0);
+
+        verticalRotation = Mathf.Clamp(verticalRotation + mouseY, -90, 90);
+        Camera.main.transform.localRotation = Quaternion.Euler(verticalRotation, 0, 0);
+    }
+}
+using UnityEngine;
+
+[System.Serializable]
+public class Item
+{
+    public string itemName;
+    public Sprite icon;
+    public int quantity;
+
+    public Item(string name, Sprite icon, int qty)
+    {
+        itemName = name;
+        this.icon = icon;
+        quantity = qty;
+    }
+}
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Inventory : MonoBehaviour
+{
+    public List<Item> items = new List<Item>();
+
+    public void AddItem(Item newItem)
+    {
+        foreach (Item item in items)
+        {
+            if (item.itemName == newItem.itemName)
+            {
+                item.quantity += newItem.quantity;
+                return;
+            }
+        }
+        items.Add(newItem);
+    }
+
+    public void RemoveItem(Item itemToRemove)
+    {
+        items.Remove(itemToRemove);
+    }
+
+    public bool ContainsItem(string itemName)
+    {
+        foreach (Item item in items)
+        {
+            if (item.itemName == itemName)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+using UnityEngine;
+using UnityEngine.UI;
+
+public class InventoryUI : MonoBehaviour
+{
+    public Inventory inventory;
+    public GameObject inventoryPanel;
+    public GameObject slotPrefab;
+
+    void Start()
+    {
+        UpdateUI();
+    }
+
+    public void UpdateUI()
+    {
+        foreach (Transform child in inventoryPanel.transform)
+        {
+            Destroy(child.gameObject);
+        }
+
+        foreach (Item item in inventory.items)
+        {
+            GameObject slot = Instantiate(slotPrefab, inventoryPanel.transform);
+            slot.transform.GetChild(0).GetComponent<Image>().sprite = item.icon;
+            slot.transform.GetChild(1).GetComponent<Text>().text = item.quantity.ToString();
+        }
+    }
+}
+public class ItemPickup : MonoBehaviour
+{
+    public Item item;
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            Inventory inventory = other.GetComponent<Inventory>();
+            if (inventory != null)
+            {
+                inventory.AddItem(item);
+                InventoryUI ui = FindObjectOfType<InventoryUI>();
+                if (ui != null)
+                {
+                    ui.UpdateUI();
+                }
+                Destroy(gameObject);
+            }
+        }
+    }
+}
+public void UseItem(Item item)
+{
+    // Öğe kullanma mantığı
+    if (item.itemName == "HealthPotion")
+    {
+        // Oyuncunun sağlığını arttır
+        Debug.Log("Sağlık iksiri kullanıldı!");
+    }
+    inventory.RemoveItem(item);
+    UpdateUI();
+}
+public void UseItem(Item item)
+{
+    // Öğe kullanma mantığı
+    if (item.itemName == "HealthPotion")
+    {
+        // Oyuncunun sağlığını arttır
+        Debug.Log("Sağlık iksiri kullanıldı!");
+    }
+    inventory.RemoveItem(item);
+    UpdateUI();
+}
+using UnityEngine;
+
+public class PlayerInventory : MonoBehaviour
+{
+    public Inventory inventory;
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.I))
+        {
+            // Envanter UI'sini aç/kapat
+            inventoryUI.SetActive(!inventoryUI.activeSelf);
+        }
+
+        if (Input.GetKeyDown(KeyCode.Alpha1))
+        {
+            // İlk öğeyi kullan
+            if (inventory.items.Count > 0)
+            {
+                UseItem(inventory.items[0]);
+            }
+        }
+    }
+}
+using UnityEngine; public class GameManager : MonoBehaviour { public GameObject enemyPrefab; public Transform spawnPoint; 
+void Start() { SpawnEnemy(); } void SpawnEnemy() { Instantiate(enemyPrefab, spawnPoint.position, spawnPoint.rotation); } } 
+using UnityEngine;
+
+public class GameManager : MonoBehaviour
+{
+    public GameObject enemyPrefab;  // Spawn edilecek düşman prefabı
+    public Transform spawnPoint;    // Düşmanın spawn edileceği konum
+
+    void Start()
+    {
+        SpawnEnemy();  // Oyun başladığında düşmanı spawn et
+    }
+}
+    void Start()
+    {
+        SpawnEnemy();  // Oyun başladığında düşmanı spawn et
+    }
+
+    void SpawnEnemy()
+    {
+        Instantiate(enemyPrefab, spawnPoint.position, spawnPoint.rotation);
+    }
+using UnityEngine;
+using UnityEngine.AI;
+
+public class Enemy : MonoBehaviour
+{
+    public float lookRadius = 10f;
+    public float attackRadius = 2f;
+    public float attackDamage = 10f;
+    public float attackCooldown = 1f;
+
+    Transform target;
+    NavMeshAgent agent;
+    float lastAttackTime;
+
+    void Start()
+    {
+        target = PlayerManager.instance.player.transform;
+        agent = GetComponent<NavMeshAgent>();
+    }
+
+    void Update()
+    {
+        float distance = Vector3.Distance(target.position, transform.position);
+
+        if (distance <= lookRadius)
+        {
+            agent.SetDestination(target.position);
+
+            if (distance <= agent.stoppingDistance)
+            {
+                FaceTarget();
+                if (distance <= attackRadius && Time.time >= lastAttackTime + attackCooldown)
+                {
+                    Attack();
+                    lastAttackTime = Time.time;
+                }
+            }
+        }
+    }
+
+    void FaceTarget()
+    {
+        Vector3 direction = (target.position - transform.position).normalized;
+        Quaternion lookRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 5f);
+    }
+
+    void Attack()
+    {
+        // Oyuncuya zarar ver
+        PlayerHealth playerHealth = target.GetComponent<PlayerHealth>();
+        if (playerHealth != null)
+        {
+            playerHealth.TakeDamage(attackDamage);
+        }
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        Color.red;
+        DrawWireSphere(transform.position, lookRadius);
+        color = Color.yellow;
+        DrawWireSphere(transform.position, attackRadius);
+    }
+}
+using UnityEngine;
+
+public class PlayerManager : MonoBehaviour
+{
+    public static PlayerManager instance;
+    public GameObject player;
+
+    void Awake()
+    {
+        if (instance == null)
+        {
+            instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+}
+using UnityEngine;
+
+public class PlayerHealth : MonoBehaviour
+{
+    public float maxHealth = 100f;
+    private float currentHealth;
+
+    void Start()
+    {
+        currentHealth = maxHealth;
+    }
+
+    public void TakeDamage(float amount)
+    {
+        currentHealth -= amount;
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+    }
+
+    void Die()
+    {
+        // Oyuncunun ölümü
+        Debug.Log("Player died!");
+    }
+}
+using UnityEngine;
+
+public class Enemy : MonoBehaviour
+{
+    public float lookRadius = 10f;
+    public float attackRadius = 2f;
+    public float attackDamage = 10f;
+    public float attackCooldown = 1f;
+    public float maxHealth = 50f;
+    public GameObject rewardPrefab;
+
+    Transform target;
+    NavMeshAgent agent;
+    float lastAttackTime;
+    float currentHealth;
+
+    void Start()
+    {
+        target = PlayerManager.instance.player.transform;
+        agent = GetComponent<NavMeshAgent>();
+        currentHealth = maxHealth;
+    }
+
+    void Update()
+    {
+        float distance = Vector3.Distance(target.position, transform.position);
+
+        if (distance <= lookRadius)
+        {
+            agent.SetDestination(target.position);
+
+            if (distance <= agent.stoppingDistance)
+            {
+                FaceTarget();
+                if (distance <= attackRadius && Time.time >= lastAttackTime + attackCooldown)
+                {
+                    Attack();
+                    lastAttackTime = Time.time;
+                }
+            }
+        }
+    }
+
+    void FaceTarget()
+    {
+        Vector3 direction = (target.position - transform.position).normalized;
+        Quaternion lookRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 5f);
+    }
+
+    void Attack()
+    {
+        // Oyuncuya zarar ver
+        PlayerHealth playerHealth = target.GetComponent<PlayerHealth>();
+        if (playerHealth != null)
+        {
+            playerHealth.TakeDamage(attackDamage);
+        }
+    }
+
+    public void TakeDamage(float amount)
+    {
+        currentHealth -= amount;
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+    }
+
+    void Die()
+    {
+        // Düşman öldüğünde ödül bırak
+        if (rewardPrefab != null)
+        {
+            Instantiate(rewardPrefab, transform.position, Quaternion.identity);
+        }
+        Destroy(gameObject);
+    }
+
+    void OnDrawGizmosSelected()
+    {
+      color = Color.red;
+      DrawWireSphere(transform.position, lookRadius);
+      color = Color.yellow;
+      DrawWireSphere(transform.position, attackRadius);
+    }
+}
+using UnityEngine;
+
+public class ItemPickup : MonoBehaviour
+{
+    public Item item;
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            Inventory inventory = other.GetComponent<Inventory>();
+            if (inventory != null)
+            {
+                inventory.AddItem(item);
+                InventoryUI ui = FindObjectOfType<InventoryUI>();
+                if (ui != null)
+                {
+                    ui.UpdateUI();
+                }
+                Destroy(gameObject);
+            }
+        }
+    }
+}
+public enum EnemyType
+{
+    Zombie,
+    Skeleton,
+    Spider,
+    Enderman
+}
+using UnityEngine;
+
+public class Enemy : MonoBehaviour
+{
+    public float lookRadius = 10f;
+    public float attackRadius = 2f;
+    public float attackDamage = 10f;
+    public float attackCooldown = 1f;
+    public float maxHealth = 50f;
+    public GameObject rewardPrefab;
+
+    Transform target;
+    NavMeshAgent agent;
+    float lastAttackTime;
+    float currentHealth;
+
+    void Start()
+    {
+        target = PlayerManager.instance.player.transform;
+        agent = GetComponent<NavMeshAgent>();
+        currentHealth = maxHealth;
+    }
+
+    void Update()
+    {
+        float distance = Vector3.Distance(target.position, transform.position);
+
+        if (distance <= lookRadius)
+        {
+            agent.SetDestination(target.position);
+
+            if (distance <= agent.stoppingDistance)
+            {
+                FaceTarget();
+                if (distance <= attackRadius && Time.time >= lastAttackTime + attackCooldown)
+                {
+                    Attack();
+                    lastAttackTime = Time.time;
+                }
+            }
+        }
+    }
+
+    void FaceTarget()
+    {
+        Vector3 direction = (target.position - transform.position).normalized;
+        Quaternion lookRotation = Quaternion.LookRotation(new Vector3(direction.x, 0, direction.z));
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 5f);
+    }
+
+    void Attack()
+    {
+        // Oyuncuya zarar ver
+        PlayerHealth playerHealth = target.GetComponent<PlayerHealth>();
+        if (playerHealth != null)
+        {
+            playerHealth.TakeDamage(attackDamage);
+        }
+    }
+
+    public void TakeDamage(float amount)
+    {
+        currentHealth -= amount;
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+    }
+
+    void Die()
+    {
+        // Düşman öldüğünde ödül bırak
+        if (rewardPrefab != null)
+        {
+            Instantiate(rewardPrefab, transform.position, Quaternion.identity);
+        }
+        Destroy(gameObject);
+    }
+
+    void OnDrawSelected()
+    {
+        color = Color.red;     );
+        color = Color.yellow;
+   DrawWireSphere(transform.position, lookRadius
+    }
+}
